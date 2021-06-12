@@ -1,0 +1,10 @@
+cloud:
+  aws:
+    credentials:
+      access-key: AKIA57Y75DGUH2HM5OBX
+      secret-key: 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
+    endpointUrl: https://dynamodb.us-east-2.amazonaws.com
+    region:
+      static: us-east-2
+    stack:
+      auto: false
