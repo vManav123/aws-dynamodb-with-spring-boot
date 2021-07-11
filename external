@@ -1,171 +1,55 @@
-Logo Jdev
-Java Tutorial
-Index Posts
-Interview Questions
-Resources
-search
+FROM ubuntu:19.04
 
-keyboard_arrow_left
-Previous
-Next
-keyboard_arrow_right
-Share onFacebook
-Share onTwitter
-Share onWhatsApp
-search
-How to Install Maven on Linux (Ubuntu)
-3 Comments
-Filed Under: Maven
-Home » Maven » How to Install Maven on Linux (Ubuntu)
-Install Maven Linux
-We can install Maven on Linux in a few simple steps. The first step is to install JDK because Maven needs it to execute.
+LABEL maintainer Nadeva<contact@nadeva.fr>
 
-In this tutorial, we will learn how to install Maven in Ubuntu. The steps are generic and it will work fine on any other Linux system too.
+EXPOSE 8080
+EXPOSE 9000
 
-Installing JDK on Linux/Ubuntu
-Generally, we use apt package manager to install anything in Ubuntu. But, it doesn’t have the latest JDK packages. The current version is Java 13 but the command apt list -a | grep openjdk shows only available OpenJDK versions are 8 and 11.
-
-So, we will install JDK using binaries and setting some required environment variables.
-
-Step 1: Download the JDK Binaries
-Go to the URL: https://jdk.java.net/13/
-
-Copy the download link for Linux/x64 build. Then use the below command to download and extract it.
+WORKDIR /root/workdir
+COPY workdir /root/workdir_complete
+RUN apt-get update && apt-get install -y \
+  wget \
+  curl \
+  unzip \
+  zip \
+  git \
+  nano \
+  vim
+RUN curl -s "https://get.sdkman.io" | bash
+RUN /bin/bash -c "source '/root/.sdkman/bin/sdkman-init.sh' && \
+                  sdk install java 8.0.222-amzn && \
+                  sdk install java 11.0.4-amzn && \
+                  sdk install maven 3.6.1"
+ENV JAVA_HOME="/root/.sdkman/candidates/java/current"
 
 
-$ wget https://download.java.net/java/GA/jdk13.0.1/cec27d702aa74d5a8630c65ae61e4305/9/GPL/openjdk-13.0.1_linux-x64_bin.tar.gz
-$ tar -xvf openjdk-13.0.1_linux-x64_bin.tar.gz
-$ mv jdk-13.0.1 /opt/
-I have moved JDK to /opt, you can keep it anywhere in the file system.
+RUN mkdir /root/tools
+RUN wget https://download.jboss.org/wildfly/17.0.1.Final/wildfly-17.0.1.Final.tar.gz -P /root/tools
+RUN cd /root/tools && tar -xzvf wildfly-17.0.1.Final.tar.gz
+RUN cd /root/tools && rm wildfly-17.0.1.Final.tar.gz
 
-Step 2: Setting JAVA_HOME and Path Environment Variables
-Open .profile file from the home directory and add the following lines to it.
+RUN sed -i '/inet-address/c\<any-address/>' /root/tools/wildfly-17.0.1.Final/standalone/configuration/standalone.xml
 
+ENV PATH="/root/tools/wildfly-17.0.1.Final/bin:${PATH}"
+RUN /root/tools/wildfly-17.0.1.Final/bin/add-user.sh admin admin -e
+RUN mkdir /root/repository
+RUN cd /root/repository && git clone --depth 1 https://github.com/nadeva/javaee-bookstore.git
 
-JAVA_HOME='/opt/jdk-13.0.1'
-PATH="$JAVA_HOME/bin:$PATH"
-export PATH
-You can relaunch the terminal or execute source .profile command to apply the configuration changes.
+#RUN cd /root/repository/javaee-bookstore && ./mvnw clean package
+#RUN cd /root/repository/javaee-bookstore && ./mvnw clean
 
-Step 3: Verify the Java Installation
-You can run java -version command to verify the JDK installation.
+RUN wget http://downloads.jboss.org/forge/releases/3.9.4.Final/forge-distribution-3.9.4.Final-offline.zip -P /root/tools
+RUN cd /root/tools && unzip forge-distribution-3.9.4.Final-offline.zip
+RUN cd /root/tools && rm forge-distribution-3.9.4.Final-offline.zip
+ENV PATH="/root/tools/forge-distribution-3.9.4.Final/bin:${PATH}"
 
-
-$ java -version
-openjdk version "13.0.1" 2019-10-15
-OpenJDK Runtime Environment (build 13.0.1+9)
-OpenJDK 64-Bit Server VM (build 13.0.1+9, mixed mode, sharing)
-$
-Installing Maven on Linux/Ubuntu
-We will install Maven in a similar way that we have installed JDK in the Linux system.
-
-Step 1: Download the Maven Binaries
-Go to the URL: https://maven.apache.org/download.cgi
-
-Copy the link for the “Binary tar.gz archive” file. Then run the following commands to download and untar it.
+RUN apt-get install -y build-essential libz-dev
+RUN wget https://github.com/oracle/graal/releases/download/vm-19.1.1/graalvm-ce-linux-amd64-19.1.1.tar.gz -P /root/tools
+RUN cd /root/tools && tar -xzvf graalvm-ce-linux-amd64-19.1.1.tar.gz
+RUN cd /root/tools && rm graalvm-ce-linux-amd64-19.1.1.tar.gz
+ENV GRAALVM_HOME="/root/tools/graalvm-ce-linux-amd64-19.1.1"
+ENV PATH="/root/tools/graalvm-ce-linux-amd64-19.1.1/bin:${PATH}"
+RUN /root/tools/graalvm-ce-linux-amd64-19.1.1/bin/gu install native-image
 
 
-$ wget https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
-$ tar -xvf apache-maven-3.6.3-bin.tar.gz
-$ mv apache-maven-3.6.3 /opt/
-Step 2: Setting M2_HOME and Path Variables
-Add the following lines to the user profile file (.profile).
-
-
-M2_HOME='/opt/apache-maven-3.6.3'
-PATH="$M2_HOME/bin:$PATH"
-export PATH
-Relaunch the terminal or execute source .profile to apply the changes.
-
-Step 3: Verify the Maven installation
-Execute mvn -version command and it should produce the following output.
-
-
-$ mvn -version
-Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)
-Maven home: /opt/apache-maven-3.6.3
-Java version: 13.0.1, vendor: Oracle Corporation, runtime: /opt/jdk-13.0.1
-Default locale: en, platform encoding: UTF-8
-OS name: "linux", version: "4.15.0-47-generic", arch: "amd64", family: "unix"
-$
-That’s all. Maven is successfully installed in your Linux system.
-
-Share onFacebook
-Share onTwitter
-Share onWhatsApp
-Share onReddit
-Share onLinkedIn
-Share onEmail
-PREV
-
-How to Install Maven on Windows
-
-NEXT
-
-Creating a Java Project using Maven Archetypes
-
-
-Pankaj
-I love Open Source technologies and writing about my experience about them is my passion.
-
-Follow Author
-
-Comments
-
-Sanjay Ghosh
-says:
-February 20, 2021 at 2:31 am
-Very helpful tutorial. It worked the first time like charm. Many Thanks!!
-
-Reply
-
-Jonathan M. Kelly
-says:
-November 3, 2020 at 1:37 am
-The current Linux x86 JDK is 15.0.1. During the command, tar -xvf openjdk-13.0.1_linux-x64_bin.tar.gz:
-there is openjdk-13.0.1, but the current JDK requires the modified command, openjdk-15.0.1.
-
-Reply
-
-tabitha
-says:
-August 17, 2020 at 5:20 am
-very helpful and genuine tutorial simply i love it.
-
-Reply
-Leave a Reply
-Your email address will not be published. Required fields are marked *
-
-Comment
-
-Name *
-Email *
-ads via Carbon
-Limited time offer: Get 10 free Adobe Stock images.
-ADS VIA CARBON
-Newsletter for You
-Enter your email address here...
-Logo Jdev
-JournalDev is one of the most popular websites for Java, Python, Android, and related technical articles. Our tutorials are regularly updated, error-free, and complete. Every month millions of developers like you visit JournalDev to read our tutorials.
-
-JournalDev was founded by Pankaj Kumar in 2010 to share his experience and learnings with the whole world. He loves Open source technologies and writing on JournalDev has become his passion.
-
-Most Popular
-Java / Java EE Tutorials
-Core Java Tutorial
-Python Tutorials
-Java Interview Questions
-Core Java Interview Questions
-Java Design Patterns
-Spring Tutorial
-Favorite Sites
-AskPython
-CodeForGeek
-GoLangDocs
-LinuxForDevices
-Mkyong
-VM-Help
-WP-Design
-© 2021 · Privacy Policy · Terms and Conditions · Contact Us · About · Part of JournalDev IT Services Private Limited
-
- 
+CMD /bin/bash
