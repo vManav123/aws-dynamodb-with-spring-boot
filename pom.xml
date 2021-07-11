@@ -57,6 +57,7 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <finalName>aws-dynamodb</finalName>
                 </configuration>
             </plugin>
         </plugins>
